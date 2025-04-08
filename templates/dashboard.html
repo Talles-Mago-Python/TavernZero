@@ -1,0 +1,194 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Barra de ações rápidas -->
+    <div class="quick-actions">
+        <a href="{{ url_for('create_group') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Criar Grupo
+        </a>
+        <a href="{{ url_for('search') }}" class="btn btn-secondary">
+            <i class="fas fa-search"></i> Buscar Grupos
+        </a>
+        <div class="notification-bell">
+            <a href="{{ url_for('notifications') }}" class="btn btn-icon">
+                <i class="fas fa-bell"></i>
+                {% if unread_count > 0 %}
+                <span class="badge">{{ unread_count }}</span>
+                {% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Sidebar com Grupos -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-users"></i> Seus Grupos</h2>
+                <div class="search-box">
+                    <input type="text" id="group-search" placeholder="Buscar grupos...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+
+            <div class="group-list">
+                {% for group in groups %}
+                <a href="{{ url_for('group_chat', group_id=group.id) }}" class="group-item">
+                    <div class="group-avatar">
+                        {{ group.name|first|upper }}
+                    </div>
+                    <div class="group-info">
+                        <h3>{{ group.name }}</h3>
+                        <p class="group-description">{{ group.description|default('Sem descrição', true) }}</p>
+                        <div class="group-meta">
+                            <span class="members-count">
+                                <i class="fas fa-user"></i> {{ group.members|length }}
+                            </span>
+                            {% if group.unread_count > 0 %}
+                            <span class="unread-messages">
+                                <i class="fas fa-comment"></i> {{ group.unread_count }} nova(s)
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if group.has_new_activity %}
+                    <span class="activity-dot"></span>
+                    {% endif %}
+                </a>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>Você não está em nenhum grupo ainda</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Área de Conteúdo Principal -->
+        <div class="main-content">
+            <!-- Cartão de Boas-Vindas -->
+            <div class="welcome-card card">
+                <div class="welcome-header">
+                    <h1>Bem-vindo, {{ current_user.username }}!</h1>
+                    <div class="user-avatar">
+                        {% if current_user.profile_picture %}
+                        <img src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile">
+                        {% else %}
+                        <span>{{ current_user.username|first|upper }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p>Selecione um grupo para começar a conversar ou crie um novo.</p>
+                
+                <div class="user-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-users"></i>
+                        <span>{{ groups|length }} grupos</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-comment"></i>
+                        <span>{{ current_user.messages|length }} mensagens</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Atividade Recente -->
+            <div class="recent-activity card">
+                <h2><i class="fas fa-clock"></i> Atividade Recente</h2>
+                <div class="activity-list">
+                    {% for activity in recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            {% if activity.type == 'message' %}
+                            <i class="fas fa-comment"></i>
+                            {% elif activity.type == 'group_join' %}
+                            <i class="fas fa-user-plus"></i>
+                            {% elif activity.type == 'document' %}
+                            <i class="fas fa-file-upload"></i>
+                            {% endif %}
+                        </div>
+                        <div class="activity-content">
+                            <p>{{ activity.description }}</p>
+                            <small>{{ activity.timestamp|datetimeformat }}</small>
+                        </div>
+                        {% if activity.link %}
+                        <a href="{{ activity.link }}" class="activity-link">
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <p>Nenhuma atividade recente</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Grupos Sugeridos -->
+            {% if suggested_groups %}
+            <div class="suggested-groups card">
+                <h2><i class="fas fa-lightbulb"></i> Sugestões para Você</h2>
+                <div class="group-suggestions">
+                    {% for group in suggested_groups %}
+                    <div class="suggestion-item">
+                        <div class="group-avatar">{{ group.name|first|upper }}</div>
+                        <div class="group-info">
+                            <h3>{{ group.name }}</h3>
+                            <p>{{ group.members|length }} membros</p>
+                        </div>
+                        <a href="{{ url_for('group_join', group_id=group.id) }}" class="btn btn-sm">
+                            Entrar
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Inclua Font Awesome para ícones -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<script>
+// Funcionalidade de busca de grupos
+document.getElementById('group-search').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const groups = document.querySelectorAll('.group-item');
+    
+    groups.forEach(group => {
+        const name = group.querySelector('h3').textContent.toLowerCase();
+        const description = group.querySelector('.group-description').textContent.toLowerCase();
+        
+        if (name.includes(searchTerm) || description.includes(searchTerm)) {
+            group.style.display = 'flex';
+        } else {
+            group.style.display = 'none';
+        }
+    });
+});
+
+// Atualização em tempo real para contagens não lidas
+function updateUnreadCounts() {
+    fetch('/api/notifications/count')
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.querySelector('.notification-bell .badge');
+            if (data.count > 0) {
+                badge.textContent = data.count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
+}
+
+// Atualizar a cada 30 segundos
+setInterval(updateUnreadCounts, 30000);
+updateUnreadCounts(); // Chamada inicial
+</script>
+{% endblock %}

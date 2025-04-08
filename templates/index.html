@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="welcome-container">
+    <div class="hero-section">
+        <h1>Bem-vindo ao ChatApp</h1>
+        <p class="subtitle">Conecte-se, colabore e converse em grupos temáticos</p>
+        
+        {% if current_user.is_authenticated %}
+            <div class="auth-buttons">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Acessar Dashboard</a>
+                <a href="{{ url_for('create_group') }}" class="btn btn-secondary">Criar Novo Grupo</a>
+            </div>
+        {% else %}
+            <div class="auth-buttons">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
+                <a href="{{ url_for('register') }}" class="btn btn-secondary">Registrar</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="features-container">
+        <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>Chat em Grupos</h3>
+            <p>Participe de conversas em grupos temáticos com pessoas que compartilham seus interesses.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Moderação</h3>
+            <p>Administradores têm controle total sobre os membros e conteúdo dos grupos.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">📁</div>
+            <h3>Compartilhamento</h3>
+            <p>Envie arquivos e imagens com pré-visualização diretamente no chat.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

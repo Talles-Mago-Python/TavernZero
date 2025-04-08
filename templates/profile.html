@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="card">
+        <div class="profile-header">
+            <div class="profile-avatar">
+                {% if user.profile_picture %}
+                <img src="{{ url_for('uploaded_file', filename=user.profile_picture) }}" alt="Foto de perfil">
+                {% else %}
+                <span>{{ user.username|first|upper }}</span>
+                {% endif %}
+            </div>
+            <h1>{{ user.username }}</h1>
+            {% if user == current_user %}
+            <a href="{{ url_for('edit_profile') }}" class="btn btn-sm">
+                <i class="fas fa-edit"></i> Editar Perfil
+            </a>
+            {% endif %}
+        </div>
+        
+        <div class="profile-details">
+            <div class="detail-item">
+                <h3><i class="fas fa-envelope"></i> Email</h3>
+                <p>{{ user.email }}</p>
+            </div>
+            
+            <div class="detail-item">
+                <h3><i class="fas fa-info-circle"></i> Bio</h3>
+                <p>{{ user.bio|default('Nenhuma biografia fornecida', true) }}</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3><i class="fas fa-users"></i> Grupos</h3>
+                    <p>{{ groups_count }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3><i class="fas fa-comments"></i> Mensagens</h3>
+                    <p>{{ messages_count }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3><i class="fas fa-calendar-alt"></i> Membro desde</h3>
+                    <p>{{ user.created_at|datetimeformat('%d/%m/%Y') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

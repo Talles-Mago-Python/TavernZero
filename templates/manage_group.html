@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="management-container">
+    <div class="management-header">
+        <h1><i class="fas fa-cog"></i> Gerenciar Grupo: {{ group.name }}</h1>
+        <a href="{{ url_for('group_chat', group_id=group.id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar ao Chat
+        </a>
+    </div>
+    
+    <div class="management-tabs">
+        <button class="tab-button active" onclick="openManagementTab('members-tab')">
+            <i class="fas fa-users"></i> Membros
+        </button>
+        <button class="tab-button" onclick="openManagementTab('settings-tab')">
+            <i class="fas fa-sliders-h"></i> Configurações
+        </button>
+    </div>
+
+    <!-- Aba de Membros -->
+    <div id="members-tab" class="management-tab-content active">
+        <div class="add-member-form">
+            <h2><i class="fas fa-user-plus"></i> Adicionar Membro</h2>
+            <form method="POST" action="{{ url_for('add_member', group_id=group.id) }}">
+                <div class="form-group">
+                    <input type="text" name="username" placeholder="Nome de usuário" required>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="members-list">
+            <h2><i class="fas fa-users"></i> Membros do Grupo</h2>
+            
+            {% for member in members %}
+                <div class="member-card {% if member.is_admin %}admin{% endif %}">
+                    <div class="member-info">
+                        <div class="member-avatar">{{ member.user.username|first|upper }}</div>
+                        <div class="member-details">
+                            <h3>{{ member.user.username }}</h3>
+                            <small>Membro desde {{ member.joined_at|datetimeformat('%d/%m/%Y') }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="member-actions">
+                        <form method="POST" action="{{ url_for('manage_group', group_id=group.id) }}">
+                            <input type="hidden" name="user_id" value="{{ member.user.id }}">
+                            
+                            {% if not member.is_admin %}
+                                <button type="submit" name="action" value="add_admin" class="btn btn-sm">
+                                    <i class="fas fa-user-shield"></i> Tornar Admin
+                                </button>
+                            {% else %}
+                                <button type="submit" name="action" value="remove_admin" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-user-minus"></i> Remover Admin
+                                </button>
+                            {% endif %}
+                            
+                            {% if not member.is_muted %}
+                                <button type="submit" name="action" value="mute" class="btn btn-sm">
+                                    <i class="fas fa-volume-mute"></i> Mutar
+                                </button>
+                            {% else %}
+                                <button type="submit" name="action" value="unmute" class="btn btn-sm">
+                                    <i class="fas fa-volume-up"></i> Desmutar
+                                </button>
+                            {% endif %}
+                            
+                            {% if member.user_id != current_user.id %}
+                                <button type="submit" name="action" value="remove" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-user-times"></i> Remover
+                                </button>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Aba de Configurações -->
+    <div id="settings-tab" class="management-tab-content">
+        <div class="group-settings-form">
+            <h2><i class="fas fa-cog"></i> Configurações do Grupo</h2>
+            <form method="POST" action="{{ url_for('update_group_settings', group_id=group.id) }}">
+                <div class="form-group">
+                    <label for="group-name">Nome do Grupo</label>
+                    <input type="text" id="group-name" name="name" value="{{ group.name }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="group-description">Descrição</label>
+                    <textarea id="group-description" name="description" rows="3">{{ group.description }}</textarea>
+                </div>
+                
+                <div class="form-group checkbox">
+                    <input type="checkbox" id="is-public" name="is_public" {% if group.is_public %}checked{% endif %}>
+                    <label for="is-public">Grupo Público</label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+            
+            <div class="danger-zone">
+                <h3><i class="fas fa-exclamation-triangle"></i> Zona de Perigo</h3>
+                <form method="POST" action="{{ url_for('delete_group', group_id=group.id) }}" onsubmit="return confirm('Tem certeza que deseja deletar este grupo? Esta ação não pode ser desfeita!');">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Deletar Grupo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Função para alternar entre abas de gerenciamento
+    function openManagementTab(tabId) {
+        // Esconde todas as abas
+        document.querySelectorAll('.management-tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Remove classe active de todos os botões
+        document.querySelectorAll('.management-tabs .tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        
+        // Mostra a aba selecionada
+        document.getElementById(tabId).classList.add('active');
+        
+        // Ativa o botão correspondente
+        event.currentTarget.classList.add('active');
+    }
+</script>
+{% endblock %}

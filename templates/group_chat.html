@@ -1,0 +1,731 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Cabeçalho do Chat Aprimorado -->
+    <div class="chat-header">
+        <div class="group-info">
+            <div class="group-avatar">{{ group.name|first|upper }}</div>
+            <div>
+                <h1>{{ group.name }}</h1>
+                <p class="group-description">{{ group.description }}</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            {% if is_admin %}
+            <a href="{{ url_for('manage_group', group_id=group.id) }}" class="btn btn-icon" title="Gerenciar Grupo">
+                <i class="fas fa-cog"></i>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-icon" title="Voltar ao Dashboard">
+                <i class="fas fa-home"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Navegação por Abas -->
+    <nav class="chat-tabs">
+        <button class="tab-button active" data-tab="chat-tab">
+            <i class="fas fa-comments"></i> Chat
+            <span class="unread-indicator" id="unread-chat-indicator"></span>
+        </button>
+        <button class="tab-button" data-tab="members-tab">
+            <i class="fas fa-users"></i> Membros
+            <span class="member-count">{{ members|length }}</span>
+        </button>
+        <button class="tab-button" data-tab="files-tab">
+            <i class="fas fa-file-alt"></i> Arquivos
+        </button>
+        <button class="tab-button" data-tab="tools-tab">
+            <i class="fas fa-tools"></i> Ferramentas
+        </button>
+    </nav>
+
+    <!-- Conteúdo das Abas -->
+    <div class="tab-content-container">
+        <!-- Aba de Chat -->
+        <div id="chat-tab" class="tab-content active">
+            <div class="messages-container" id="messages-container">
+                {% for message in messages %}
+                <div class="message {% if message.user_id == current_user.id %}current-user{% endif %}" data-message-id="{{ message.id }}">
+                    <div class="message-avatar" title="{{ message.author.username }}">
+                        {{ message.author.username|first|upper }}
+                        {% if message.author == group.creator %}
+                        <span class="creator-badge" title="Criador do Grupo"><i class="fas fa-crown"></i></span>
+                        {% endif %}
+                    </div>
+                    <div class="message-content-wrapper">
+                        <div class="message-header">
+                            <span class="message-username">{{ message.author.username }}</span>
+                            <span class="message-time" title="{{ message.timestamp|datetimeformat('%d/%m/%Y %H:%M') }}">
+                                {{ message.timestamp|datetimeformat('%H:%M') }}
+                                {% if message.edited %}
+                                <span class="edited-badge" title="Editado">(editado)</span>
+                                {% endif %}
+                            </span>
+                            {% if message.user_id == current_user.id or is_admin %}
+                            <div class="message-actions">
+                                {% if message.user_id == current_user.id %}
+                                <button class="btn-icon edit-message" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn-icon delete-message" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="message-bubble">
+                            {{ message.content }}
+                            {% if message.message_type == 'dice' %}
+                            <div class="dice-message">
+                                <div class="dice-icon">🎲</div>
+                                <div class="dice-content">{{ message.content }}</div>
+                            </div>
+                            {% elif message.file_path %}
+                                {% set file_ext = message.file_path.split('.')[-1].lower() %}
+                                {% if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+                                <div class="image-attachment">
+                                    <img src="{{ url_for('uploaded_file', filename=message.file_path.split('/')[-1]) }}" 
+                                        class="image-preview"
+                                        onclick="openImageModal('{{ url_for('uploaded_file', filename=message.file_path.split('/')[-1]) }}')">
+                                    <a href="{{ url_for('uploaded_file', filename=message.file_path.split('/')[-1]) }}" 
+                                        class="download-link" 
+                                        download
+                                        title="Baixar imagem">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                </div>
+                                {% else %}
+                                <div class="file-attachment">
+                                    <div class="file-icon">
+                                        <i class="fas fa-file-{{ 'pdf' if file_ext == 'pdf' else 'word' if file_ext in ['doc', 'docx'] else 'alt' }}"></i>
+                                    </div>
+                                    <div class="file-info">
+                                        <a href="{{ url_for('uploaded_file', filename=message.file_path.split('/')[-1]) }}" 
+                                           class="file-link"
+                                           download>
+                                            {{ message.file_path.split('/')[-1]|truncate(30) }}
+                                        </a>
+                                        <span class="file-size">{{ message.file_size|filesizeformat }}</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <form class="message-form" method="POST" action="{{ url_for('send_group_message', group_id=group.id) }}" enctype="multipart/form-data">
+                <div class="message-form-container">
+                    <div class="message-toolbar">
+                        <label for="file-input" class="btn-icon" title="Anexar arquivo">
+                            <i class="fas fa-paperclip"></i>
+                            <input type="file" id="file-input" name="file" class="file-input" accept="image/*,.pdf,.doc,.docx,.txt">
+                        </label>
+                        <button type="button" class="btn-icon" id="emoji-picker-btn" title="Emojis">
+                            <i class="far fa-smile"></i>
+                        </button>
+                        <button type="button" class="btn-icon" id="dice-roller-btn" title="Rolar dados">
+                            <i class="fas fa-dice"></i>
+                        </button>
+                    </div>
+                    <textarea name="content" class="message-input" placeholder="Digite sua mensagem..." required></textarea>
+                    <button type="submit" class="send-button" title="Enviar mensagem">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Aba de Membros -->
+        <div id="members-tab" class="tab-content">
+            <div class="members-list-container">
+                <div class="search-box">
+                    <input type="text" id="member-search" placeholder="Buscar membros...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="members-list">
+                    {% for member in members %}
+                    <div class="member-card {% if member.is_admin %}admin{% endif %}" data-username="{{ member.user.username|lower }}">
+                        <div class="member-info">
+                            <div class="member-avatar" title="{{ member.user.username }}">
+                                {{ member.user.username|first|upper }}
+                                {% if member.user == group.creator %}
+                                <span class="creator-badge"><i class="fas fa-crown"></i></span>
+                                {% endif %}
+                            </div>
+                            <div class="member-details">
+                                <h3>{{ member.user.username }}</h3>
+                                <div class="member-meta">
+                                    <span class="member-status {% if member.user.is_online %}online{% else %}offline{% endif %}">
+                                        {% if member.user.is_online %}Online{% else %}Offline{% endif %}
+                                    </span>
+                                    <span class="member-joined">
+                                        Membro desde {{ member.joined_at|datetimeformat('%d/%m/%Y') }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="member-badges">
+                            {% if member.is_admin %}
+                            <span class="badge admin-badge" title="Administrador">
+                                <i class="fas fa-shield-alt"></i>
+                            </span>
+                            {% endif %}
+                            {% if member.is_muted %}
+                            <span class="badge muted-badge" title="Membro mutado">
+                                <i class="fas fa-volume-mute"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if is_admin and member.user_id != current_user.id %}
+                        <div class="member-actions dropdown">
+                            <button class="btn-icon dropdown-toggle" title="Ações">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div class="dropdown-menu">
+                                {% if not member.is_admin %}
+                                <form method="POST" action="{{ url_for('manage_group', group_id=group.id) }}">
+                                    <input type="hidden" name="user_id" value="{{ member.user.id }}">
+                                    <button type="submit" name="action" value="add_admin" class="dropdown-item">
+                                        <i class="fas fa-user-shield"></i> Tornar Admin
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form method="POST" action="{{ url_for('manage_group', group_id=group.id) }}">
+                                    <input type="hidden" name="user_id" value="{{ member.user.id }}">
+                                    <button type="submit" name="action" value="remove_admin" class="dropdown-item">
+                                        <i class="fas fa-user-minus"></i> Remover Admin
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
+                                {% if not member.is_muted %}
+                                <form method="POST" action="{{ url_for('manage_group', group_id=group.id) }}">
+                                    <input type="hidden" name="user_id" value="{{ member.user.id }}">
+                                    <button type="submit" name="action" value="mute" class="dropdown-item">
+                                        <i class="fas fa-volume-mute"></i> Mutar
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form method="POST" action="{{ url_for('manage_group', group_id=group.id) }}">
+                                    <input type="hidden" name="user_id" value="{{ member.user.id }}">
+                                    <button type="submit" name="action" value="unmute" class="dropdown-item">
+                                        <i class="fas fa-volume-up"></i> Desmutar
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
+                                <form method="POST" action="{{ url_for('manage_group', group_id=group.id) }}">
+                                    <input type="hidden" name="user_id" value="{{ member.user.id }}">
+                                    <button type="submit" name="action" value="remove" class="dropdown-item text-danger">
+                                        <i class="fas fa-user-times"></i> Remover
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba de Arquivos -->
+        <div id="files-tab" class="tab-content">
+            <div class="files-container">
+                <!-- Substitua esta parte na aba de Arquivos -->
+<div class="files-header">
+    <h2>Arquivos do Grupo</h2>
+    <form method="POST" action="{{ url_for('upload_group_document', group_id=group.id) }}" 
+          enctype="multipart/form-data" 
+          class="upload-form"
+          id="upload-form">
+        <label class="btn btn-primary">
+            <i class="fas fa-upload"></i> Enviar Arquivo
+            <input type="file" name="file" id="file-upload" required>
+        </label>
+        <button type="submit" class="btn btn-success" style="display: none;" id="submit-upload">
+            <i class="fas fa-check"></i> Confirmar
+        </button>
+    </form>
+</div>
+                
+                <div class="file-filters">
+                    <button class="filter-btn active" data-filter="all">Todos</button>
+                    <button class="filter-btn" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
+                    <button class="filter-btn" data-filter="document"><i class="fas fa-file-alt"></i> Documentos</button>
+                    <button class="filter-btn" data-filter="other"><i class="fas fa-file"></i> Outros</button>
+                </div>
+                
+                <div class="document-list">
+                    {% for document in documents %}
+                    <div class="document-item" 
+     data-file-type="{% if document.file_type in ['jpg', 'jpeg', 'png', 'gif'] %}image
+                    {% elif document.file_type in ['pdf', 'doc', 'docx', 'txt'] %}document
+                    {% else %}other{% endif %}">
+    <div class="document-icon">
+        {% if document.file_type in ['jpg', 'jpeg', 'png', 'gif'] %}
+        <div class="document-thumbnail">
+            <img src="{{ url_for('uploaded_file', filename=document.filename) }}" 
+                 alt="{{ document.original_name }}"
+                 onclick="openFileModal('{{ url_for('view_document', filename=document.filename) }}', 'image')">
+        </div>
+        {% else %}
+        <i class="fas fa-{{ 'file-pdf' if document.file_type == 'pdf' else 
+                          'file-word' if document.file_type in ['doc', 'docx'] else 
+                          'file-alt' }}"
+           onclick="openFileModal('{{ url_for('view_document', filename=document.filename) }}', '{{ document.file_type }}')"></i>
+        {% endif %}
+    </div>
+                        <div class="document-info">
+                            <h3 title="{{ document.original_name }}">{{ document.original_name|truncate(30) }}</h3>
+                            <div class="document-meta">
+                                <span class="document-uploader">
+                                    <i class="fas fa-user"></i> {{ document.user.username }}
+                                </span>
+                                <span class="document-date">
+                                    <i class="fas fa-calendar-alt"></i> {{ document.uploaded_at|datetimeformat('%d/%m/%Y') }}
+                                </span>
+                                <span class="document-size">
+                                    <i class="fas fa-database"></i> {{ document.file_size|filesizeformat }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="document-actions">
+                            <a href="{{ url_for('uploaded_file', filename=document.filename) }}" 
+                               class="btn-icon" 
+                               download
+                               title="Baixar">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% if is_admin or document.user_id == current_user.id %}
+                            <form method="POST" action="{{ url_for('delete_document', document_id=document.id) }}">
+                                <button type="submit" class="btn-icon text-danger" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Nenhum arquivo enviado ainda</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba de Ferramentas -->
+        <div id="tools-tab" class="tab-content">
+            <div class="tools-container">
+                <div class="tool-card">
+                    <h3><i class="fas fa-dice"></i> Rolagem de Dados</h3>
+                    <div class="dice-roller">
+                        <div class="dice-controls">
+                            <select id="dice-type" class="form-control">
+                                <option value="4">d4</option>
+                                <option value="6" selected>d6</option>
+                                <option value="8">d8</option>
+                                <option value="10">d10</option>
+                                <option value="12">d12</option>
+                                <option value="20">d20</option>
+                                <option value="100">d100</option>
+                            </select>
+                            <input type="number" id="dice-count" min="1" max="10" value="1" class="form-control">
+                            <button id="roll-dice" class="btn btn-primary">Rolar</button>
+                        </div>
+                        <div id="dice-results" class="dice-results"></div>
+                    </div>
+                </div>
+                
+                <div class="tool-card">
+                    <h3><i class="fas fa-link"></i> Convites</h3>
+                    {% if is_admin %}
+                    <div class="invite-section">
+                        <div class="invite-link">
+                            <!-- Na aba de Ferramentas do group_chat.html -->
+<input type="text" id="invite-link" 
+value="{{ url_for('join_group', group_id=group.id, token=group.invite_token, _external=True) }}" 
+readonly>
+                            <button id="copy-invite" class="btn btn-secondary">
+                                <i class="fas fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                        <form method="POST" action="{{ url_for('reset_invite', group_id=group.id) }}">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-sync-alt"></i> Resetar Link
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <p>Apenas administradores podem gerenciar convites.</p>
+                    {% endif %}
+                </div>
+                
+                <div class="tool-card">
+                    <h3><i class="fas fa-chart-bar"></i> Estatísticas</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ messages|length }}</div>
+                            <div class="stat-label">Mensagens</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ documents|length }}</div>
+                            <div class="stat-label">Arquivos</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ members|length }}</div>
+                            <div class="stat-label">Membros</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Edição de Mensagem -->
+<div id="edit-message-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Editar Mensagem</h3>
+        <form id="edit-message-form">
+            <input type="hidden" id="edit-message-id">
+            <textarea id="edit-message-content" class="form-control" required></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('edit-message-modal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para Rolagem de Dados -->
+<div id="dice-roll-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Enviar Resultado para o Chat</h3>
+        <div id="dice-roll-result"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('dice-roll-modal')">Cancelar</button>
+            <button type="button" id="send-dice-roll" class="btn btn-primary">Enviar</button>
+        </div>
+    </div>
+</div>
+<!-- Modal Foile View-->
+<div id="file-viewer-modal" class="modal">
+    <div class="modal-content" style="max-width: 90%; max-height: 90%;">
+        <span class="close-modal" onclick="closeModal('file-viewer-modal')">&times;</span>
+        <div id="file-viewer-content">
+            <!-- O conteúdo será inserido aqui pelo JavaScript -->
+        </div>
+        <div class="modal-actions">
+            <a id="download-file-btn" class="btn btn-primary" download>
+                <i class="fas fa-download"></i> Baixar
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('file-viewer-modal')">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+// Controle de Abas
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', function() {
+        const tabId = this.getAttribute('data-tab');
+        
+        // Atualiza abas
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        
+        this.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        
+        // Rolagem automática para mensagens
+        if (tabId === 'chat-tab') {
+            scrollToBottom();
+        }
+    });
+});
+
+// Rolagem automática para o final do chat
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+}
+
+// Filtro de membros
+document.getElementById('member-search').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    document.querySelectorAll('.member-card').forEach(card => {
+        const username = card.getAttribute('data-username');
+        card.style.display = username.includes(searchTerm) ? 'flex' : 'none';
+    });
+});
+
+// Filtro de arquivos
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const filter = this.getAttribute('data-filter');
+        
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        document.querySelectorAll('.document-item').forEach(item => {
+            const type = item.getAttribute('data-file-type');
+            item.style.display = (filter === 'all' || type === filter) ? 'flex' : 'none';
+        });
+    });
+});
+
+// Rolagem de dados
+document.getElementById('roll-dice').addEventListener('click', function() {
+    const diceType = parseInt(document.getElementById('dice-type').value);
+    const diceCount = parseInt(document.getElementById('dice-count').value);
+    let results = [];
+    let total = 0;
+
+    for (let i = 0; i < diceCount; i++) {
+        const roll = Math.floor(Math.random() * diceType) + 1;
+        results.push(roll);
+        total += roll;
+    }
+
+    const resultHTML = `
+        <div class="dice-result">
+            <p>Rolando ${diceCount}d${diceType}:</p>
+            <div class="dice-rolls">${results.join(', ')}</div>
+            ${diceCount > 1 ? `<p class="dice-total">Total: <strong>${total}</strong></p>` : ''}
+        </div>
+    `;
+
+    document.getElementById('dice-results').innerHTML = resultHTML;
+    document.getElementById('dice-roll-result').innerHTML = resultHTML;
+    openModal('dice-roll-modal');
+});
+
+// Enviar resultado dos dados para o chat
+document.getElementById('send-dice-roll').addEventListener('click', function() {
+    const resultText = document.querySelector('#dice-roll-result .dice-result').textContent.trim();
+    document.querySelector('.message-input').value = resultText;
+    closeModal('dice-roll-modal');
+});
+
+// Copiar link de convite
+document.getElementById('copy-invite').addEventListener('click', function() {
+    const inviteLink = document.getElementById('invite-link');
+    inviteLink.select();
+    document.execCommand('copy');
+    
+    // Feedback visual
+    const originalText = this.innerHTML;
+    this.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+    setTimeout(() => {
+        this.innerHTML = originalText;
+    }, 2000);
+});
+
+// Controle de modais
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+// Fechar modal ao clicar fora
+window.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+});
+
+// Inicialização
+window.onload = function() {
+    scrollToBottom();
+    
+    // Configurar eventos para mensagens
+    setupMessageEvents();
+};
+
+function setupMessageEvents() {
+    // Edição de mensagens
+    document.querySelectorAll('.edit-message').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const messageElement = this.closest('.message');
+            const messageId = messageElement.getAttribute('data-message-id');
+            const messageContent = messageElement.querySelector('.message-bubble').textContent.trim();
+            
+            document.getElementById('edit-message-id').value = messageId;
+            document.getElementById('edit-message-content').value = messageContent;
+            openModal('edit-message-modal');
+        });
+    });
+    
+    // Exclusão de mensagens
+    document.querySelectorAll('.delete-message').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja excluir esta mensagem?')) {
+                const messageId = this.closest('.message').getAttribute('data-message-id');
+                fetch(`/message/${messageId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.querySelector(`.message[data-message-id="${messageId}"]`).remove();
+                    }
+                });
+            }
+        });
+    });
+    
+    // Envio do formulário de edição
+    document.getElementById('edit-message-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const messageId = document.getElementById('edit-message-id').value;
+        const newContent = document.getElementById('edit-message-content').value;
+        
+        fetch(`/message/${messageId}/edit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ content: newContent })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const messageElement = document.querySelector(`.message[data-message-id="${messageId}"]`);
+                messageElement.querySelector('.message-bubble').innerHTML = newContent;
+                messageElement.querySelector('.message-time').innerHTML += ' <span class="edited-badge">(editado)</span>';
+                closeModal('edit-message-modal');
+            }
+        });
+    });
+}
+document.getElementById('file-upload').addEventListener('change', function(e) {
+    if (this.files.length > 0) {
+        document.getElementById('submit-upload').style.display = 'inline-block';
+    } else {
+        document.getElementById('submit-upload').style.display = 'none';
+    }
+});
+
+// Envio do formulário de upload
+document.getElementById('upload-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'Accept': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload(); // Recarrega a página para mostrar o novo arquivo
+        } else {
+            alert('Erro ao enviar arquivo: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erro ao enviar arquivo');
+    });
+});
+// Exclusão de documentos
+document.querySelectorAll('.delete-document').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (confirm('Tem certeza que deseja excluir este arquivo permanentemente?')) {
+            const form = this.closest('form');
+            const documentId = form.querySelector('input[name="document_id"]').value;
+            
+            fetch(`/delete_document/${documentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    form.closest('.document-item').remove();
+                    // Mostrar mensagem de sucesso
+                    alert('Arquivo excluído com sucesso!');
+                } else {
+                    alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erro ao excluir arquivo');
+            });
+        }
+    });
+});
+function openFileModal(fileUrl, fileType) {
+    const modal = document.getElementById('file-viewer-modal');
+    const content = document.getElementById('file-viewer-content');
+    const downloadBtn = document.getElementById('download-file-btn');
+    
+    downloadBtn.href = fileUrl;
+    
+    // Limpar conteúdo anterior
+    content.innerHTML = '';
+    
+    if (fileType.match(/^image/)) {
+        // Visualização de imagens
+        content.innerHTML = `<img src="${fileUrl}" style="max-width: 100%; max-height: 70vh;">`;
+    } else if (fileType === 'pdf') {
+        // Visualização de PDF (usando PDF.js ou iframe)
+        content.innerHTML = `
+            <iframe src="${fileUrl}" 
+                    style="width: 100%; height: 70vh; border: none;">
+            </iframe>`;
+    } else if (fileType.match(/^text/)) {
+        // Visualização de texto
+        fetch(fileUrl)
+            .then(response => response.text())
+            .then(text => {
+                content.innerHTML = `<pre style="white-space: pre-wrap; max-height: 70vh; overflow: auto;">${escapeHtml(text)}</pre>`;
+            });
+    } else {
+        // Para outros tipos de arquivo, mostrar opção de download
+        content.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-file-download fa-3x"></i>
+                <p>Este tipo de arquivo não pode ser visualizado. Por favor, baixe para visualizar.</p>
+            </div>`;
+    }
+    
+    openModal('file-viewer-modal');
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+</script>
+{% endblock %}

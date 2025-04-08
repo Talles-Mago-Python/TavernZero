@@ -1,12 +1,32 @@
+# Python
 __pycache__/
 *.py[cod]
 *.sqlite
-instance/
-static/
-.env
+*.pyc
+*.pyd
+*.pyo
+
+# Ambiente virtual
 venv/
 env/
+.venv/
+
+# Arquivos de configuração
+instance/
+.env
+.env.local
+
+# IDE
+.idea/
 .vscode/
+
+# Uploads
 uploads/
-templates/
+
+# Banco de dados local
+site.db
+
+# Outros
 *.log
+*.pot
+*.sql
