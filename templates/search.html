@@ -5,10 +5,20 @@
     <div class="card">
         <h1><i class="fas fa-search"></i> Buscar</h1>
         
-        <form method="GET" class="search-form">
+        <form method="GET" class="search-form" action="{{ url_for('search') }}">
             <div class="search-box">
-                <input type="text" name="q" value="{{ query }}" placeholder="Buscar grupos ou usuários...">
-                <button type="submit"><i class="fas fa-search"></i></button>
+                <input type="text" name="q" value="{{ query }}" placeholder="Buscar grupos, usuários ou mensagens..." required>
+                <button type="submit" aria-label="Buscar">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <div class="search-filters">
+                <label>
+                    <input type="checkbox" name="search_groups" checked> Grupos
+                </label>
+                <label>
+                    <input type="checkbox" name="search_users" checked> Usuários
+                </label>
             </div>
         </form>
         
@@ -16,44 +26,92 @@
             <div class="search-results">
                 {% if group_results or user_results %}
                     {% if group_results %}
-                        <h2>Grupos</h2>
-                        <div class="result-grid">
-                            {% for group in group_results %}
-                            <div class="result-card">
-                                <div class="group-avatar">{{ group.name|first|upper }}</div>
-                                <div class="group-info">
-                                    <h3>{{ group.name }}</h3>
-                                    <p>{{ group.description|default('Sem descrição', true) }}</p>
-                                    <small>{{ group.members|length }} membros</small>
-                                </div>
-                                <a href="{{ url_for('group_join', group_id=group.id) }}" class="btn btn-sm">
-                                    Entrar
-                                </a>
+                        <section aria-labelledby="groups-heading">
+                            <h2 id="groups-heading">
+                                <i class="fas fa-users"></i> Grupos
+                                <span class="badge">{{ group_results|length }}</span>
+                            </h2>
+                            <div class="result-grid">
+                                {% for group in group_results %}
+                                <article class="result-card">
+                                    <div class="group-avatar" aria-hidden="true">
+                                        {{ group.name|first|upper }}
+                                    </div>
+                                    <div class="group-info">
+                                        <h3>
+                                            <a href="{{ url_for('group_chat', group_id=group.id) }}">
+                                                {{ group.name }}
+                                            </a>
+                                        </h3>
+                                        <p>{{ group.description|default('Sem descrição', true) }}</p>
+                                        <div class="meta-info">
+                                            <small>
+                                                <i class="fas fa-users"></i> {{ group.members|length }} membros
+                                            </small>
+                                            <small>
+                                                <i class="fas fa-comment"></i> {{ group.messages|length }} mensagens
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% if current_user.is_authenticated %}
+                                        {% if not group.members|selectattr('user_id', 'equalto', current_user.id)|list %}
+                                            <a href="{{ url_for('join_group', group_id=group.id) }}" class="btn btn-sm btn-primary">
+                                                Entrar
+                                            </a>
+                                        {% else %}
+                                            <span class="badge success">Membro</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </article>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
+                        </section>
                     {% endif %}
                     
                     {% if user_results %}
-                        <h2>Usuários</h2>
-                        <div class="result-grid">
-                            {% for user in user_results %}
-                            <div class="result-card">
-                                <div class="user-avatar">{{ user.username|first|upper }}</div>
-                                <div class="user-info">
-                                    <h3>{{ user.username }}</h3>
-                                    <p>{{ user.bio|default('Sem biografia', true) }}</p>
-                                </div>
+                        <section aria-labelledby="users-heading">
+                            <h2 id="users-heading">
+                                <i class="fas fa-user"></i> Usuários
+                                <span class="badge">{{ user_results|length }}</span>
+                            </h2>
+                            <div class="result-grid">
+                                {% for user in user_results %}
+                                <article class="result-card">
+                                    <div class="user-avatar" aria-hidden="true">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                    <div class="user-info">
+                                        <h3>
+                                            <a href="{{ url_for('profile', user_id=user.id) }}">
+                                                {{ user.username }}
+                                            </a>
+                                        </h3>
+                                        <p>{{ user.bio|default('Sem biografia', true)|truncate(100) }}</p>
+                                        <small class="meta-info">
+                                            <i class="fas fa-clock"></i> Membro desde {{ user.created_at|datetimeformat('%d/%m/%Y') }}
+                                        </small>
+                                    </div>
+                                </article>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
+                        </section>
                     {% endif %}
                 {% else %}
                     <div class="empty-state">
                         <i class="fas fa-exclamation-circle"></i>
                         <p>Nenhum resultado encontrado para "{{ query }}"</p>
+                        <p class="suggestions">Tente usar termos diferentes ou verifique a ortografia.</p>
                     </div>
                 {% endif %}
+            </div>
+        {% else %}
+            <div class="search-tips">
+                <h3><i class="fas fa-lightbulb"></i> Dicas de busca</h3>
+                <ul>
+                    <li>Use aspas para buscar frases exatas: "RPG medieval"</li>
+                    <li>Use o nome completo do usuário para melhores resultados</li>
+                    <li>Explore grupos públicos para encontrar comunidades</li>
+                </ul>
             </div>
         {% endif %}
     </div>
