@@ -196,8 +196,6 @@ def create_notification(user_id, message, link=None):
 # ========== ROUTES ==========
 @app.route('/')
 def home():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
 @app.route('/dashboard')
@@ -260,7 +258,8 @@ def dashboard():
                          groups=user_groups,
                          unread_count=unread_notifications,  # Corrigido aqui
                          recent_activities=recent_activities,
-                         suggested_groups=suggested_groups)
+                         suggested_groups=suggested_groups,
+                         group_id=id,)
 @app.route('/create_group', methods=['GET', 'POST'])
 @login_required
 def create_group():
@@ -751,7 +750,7 @@ def view_document(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 @app.route('/uploads/<filename>')
 @login_required
-def uploaded_file(filename):
+def uploads(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ========== AUTH ROUTES ==========
