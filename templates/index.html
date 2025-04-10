@@ -1,41 +1,150 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="welcome-container">
-    <div class="hero-section">
-        <h1>Bem-vindo ao ChatApp</h1>
-        <p class="subtitle">Conecte-se, colabore e converse em grupos temáticos</p>
-        
-        {% if current_user.is_authenticated %}
-            <div class="auth-buttons">
-                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Acessar Dashboard</a>
-                <a href="{{ url_for('create_group') }}" class="btn btn-secondary">Criar Novo Grupo</a>
-            </div>
-        {% else %}
-            <div class="auth-buttons">
-                <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
-                <a href="{{ url_for('register') }}" class="btn btn-secondary">Registrar</a>
-            </div>
-        {% endif %}
-    </div>
 
-    <div class="features-container">
-        <div class="feature-card">
-            <div class="feature-icon">💬</div>
-            <h3>Chat em Grupos</h3>
-            <p>Participe de conversas em grupos temáticos com pessoas que compartilham seus interesses.</p>
-        </div>
+{% block title %}ChatApp - Plataforma de Comunicação em Grupo{% endblock %}
+
+
+{% block content %}
+<main class="landing-page">
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title">Conecte-se de forma <span class="text-gradient">inteligente</span></h1>
+        <p class="hero-subtitle">Plataforma de chat em grupo com moderação avançada e compartilhamento seguro de arquivos</p>
         
-        <div class="feature-card">
-            <div class="feature-icon">🛡️</div>
-            <h3>Moderação</h3>
-            <p>Administradores têm controle total sobre os membros e conteúdo dos grupos.</p>
+        <div class="hero-cta">
+          {% if current_user.is_authenticated %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">
+              <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="{{ url_for('create_group') }}" class="btn btn-outline btn-lg">
+              <i class="fas fa-plus"></i> Criar Grupo
+            </a>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+              <i class="fas fa-sign-in-alt"></i> Entrar
+            </a>
+            <a href="{{ url_for('register') }}" class="btn btn-outline btn-lg">
+              <i class="fas fa-user-plus"></i> Registrar
+            </a>
+          {% endif %}
         </div>
-        
-        <div class="feature-card">
-            <div class="feature-icon">📁</div>
-            <h3>Compartilhamento</h3>
-            <p>Envie arquivos e imagens com pré-visualização diretamente no chat.</p>
-        </div>
+      </div>
+      
+      <div class="hero-image">
+        <img src="{{ url_for('static', filename='images/hero-illustration.png') }}" alt="Ilustração de chat em grupo" loading="lazy">
+      </div>
     </div>
-</div>
+    
+    <div class="scroll-indicator">
+      <span>Explore mais</span>
+      <i class="fas fa-chevron-down"></i>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features">
+    <div class="section-header">
+      <h2 class="section-title">Recursos Poderosos</h2>
+      <p class="section-subtitle">Tudo que você precisa para comunicação eficiente</p>
+    </div>
+    
+    <div class="features-grid">
+      <!-- Feature 1 -->
+      <div class="feature-card">
+        <div class="feature-icon bg-primary-100">
+          <i class="fas fa-comments"></i>
+        </div>
+        <h3>Chat em Tempo Real</h3>
+        <p>Conversas instantâneas com notificações em tempo real e histórico completo.</p>
+        <ul class="feature-list">
+          <li><i class="fas fa-check-circle"></i> Mensagens instantâneas</li>
+          <li><i class="fas fa-check-circle"></i> Notificações personalizadas</li>
+          <li><i class="fas fa-check-circle"></i> Busca no histórico</li>
+        </ul>
+      </div>
+      
+      <!-- Feature 2 -->
+      <div class="feature-card">
+        <div class="feature-icon bg-success-100">
+          <i class="fas fa-users-cog"></i>
+        </div>
+        <h3>Moderação Avançada</h3>
+        <p>Controle total sobre seus grupos com ferramentas de moderação poderosas.</p>
+        <ul class="feature-list">
+          <li><i class="fas fa-check-circle"></i> Controle de membros</li>
+          <li><i class="fas fa-check-circle"></i> Sistema de avisos</li>
+          <li><i class="fas fa-check-circle"></i> Registro de atividades</li>
+        </ul>
+      </div>
+      
+      <!-- Feature 3 -->
+      <div class="feature-card">
+        <div class="feature-icon bg-warning-100">
+          <i class="fas fa-file-upload"></i>
+        </div>
+        <h3>Compartilhamento Seguro</h3>
+        <p>Envie e receba arquivos com pré-visualização e controle de acesso.</p>
+        <ul class="feature-list">
+          <li><i class="fas fa-check-circle"></i> Pré-visualização de arquivos</li>
+          <li><i class="fas fa-check-circle"></i> Controle de permissões</li>
+          <li><i class="fas fa-check-circle"></i> Histórico de downloads</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="testimonials">
+    <div class="section-header">
+      <h2 class="section-title">O que nossos usuários dizem</h2>
+      <p class="section-subtitle">Experiências reais de pessoas reais</p>
+    </div>
+    
+    <div class="testimonials-slider">
+      <div class="testimonial-card">
+        <div class="testimonial-content">
+          <div class="rating">
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+            <i class="fas fa-star"></i>
+          </div>
+          <p>"TavernZero É UMA MERDA, eu entrei achando que seria mais um site qualquer de RPG, mas quando eu começo a usar eu percebo que tem A POHA DE UM DUENTE CHAMADO TALLES ME MANDANDO MENSAGEM AS 3 DA MANHA ME PERGUNTANDO SE EU IA CONTINUAR USANDO O SITE, MANO SAO 3 DA MANHÃ VC ACHA QUE EU VOU JOGAR RPG AS TRES DA MANHÃ?????? CLARO SO SE FOR COM A PORRA DO NEGAO QUE DORME DEBAIXO DA MINHA CAMA"</p>
+        </div>
+        <div class="testimonial-author">
+          <img src="{{ url_for('static', filename='images/user1.jpg') }}" alt="Lucas" class="author-avatar">
+          <div class="author-info">
+            <strong>Lucas Campos</strong>
+            <span>Nerdizinho Safadinho</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA Section -->
+  <section class="final-cta">
+    <div class="cta-content">
+      <h2>Pronto para melhorar sua comunicação?</h2>
+      <p>Junte-se a milhares de usuários satisfeitos e experimente a diferença hoje mesmo.</p>
+      
+      <div class="cta-buttons">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('create_group') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus"></i> Criar Meu Grupo
+          </a>
+        {% else %}
+          <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus"></i> Criar Conta Gratuita
+          </a>
+          <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg">
+            <i class="fas fa-sign-in-alt"></i> Entrar
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</main>
 {% endblock %}
